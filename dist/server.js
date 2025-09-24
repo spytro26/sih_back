@@ -6,17 +6,33 @@ import lcaRoutes from "./routes/lca.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://sih-front-seven.vercel.app"
+];
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(",")).split(",").map(o => o.trim()).filter(Boolean);
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 // CORS Configuration
 app.use(cors({
-    origin: FRONTEND_URL,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin)
+            return callback(null, true);
+        if (ALLOWED_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error(`CORS blocked: ${origin} is not in ALLOWED_ORIGINS`));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204,
 }));
+// Handle preflight for all routes (Express 5 compatible)
+app.options(/.*/, cors());
 // Health check endpoint
 app.get("/health", (req, res) => {
     res.status(200).json({
@@ -47,7 +63,6 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 LCA Backend Server is running on port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-    console.log(`🔗 Frontend URL: ${FRONTEND_URL}`);
     console.log(`🌐 Health check: http://localhost:${PORT}/health`);
 });
 //# sourceMappingURL=server.js.map
