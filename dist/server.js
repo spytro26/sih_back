@@ -6,33 +6,33 @@ import lcaRoutes from "./routes/lca.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
-const DEFAULT_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://sih-front-seven.vercel.app"
-];
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(",")).split(",").map(o => o.trim()).filter(Boolean);
+// Open CORS by default (allow from any origin)
+const OPEN_CORS = (process.env.OPEN_CORS || "true").toLowerCase() === "true";
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
-// CORS Configuration
+// Add PNA header for preflight compatibility when accessing local/private servers from HTTPS origins
+app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
+    next();
+});
+// CORS Configuration (fully open when OPEN_CORS=true)
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
-        if (!origin)
-            return callback(null, true);
-        if (ALLOWED_ORIGINS.includes(origin)) {
-            return callback(null, true);
-        }
-        return callback(new Error(`CORS blocked: ${origin} is not in ALLOWED_ORIGINS`));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: OPEN_CORS ? "*" : true, // star is fine since we do not allow credentials
+    credentials: false, // must be false when Access-Control-Allow-Origin is '*'
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    // Omit allowedHeaders so CORS middleware reflects back Access-Control-Request-Headers
     optionsSuccessStatus: 204,
+    maxAge: 86400, // cache preflight for 1 day
 }));
 // Handle preflight for all routes (Express 5 compatible)
-app.options(/.*/, cors());
+app.options(/.*/, cors({
+    origin: OPEN_CORS ? "*" : true,
+    credentials: false,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    optionsSuccessStatus: 204,
+    maxAge: 86400,
+}));
 // Health check endpoint
 app.get("/health", (req, res) => {
     res.status(200).json({

@@ -8,21 +8,26 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-// If you want to restrict origins later, set ALLOWED_ORIGINS in .env
-// By default, we allow all origins (*) to avoid CORS issues
+// Open CORS by default (allow from any origin)
 const OPEN_CORS = (process.env.OPEN_CORS || "true").toLowerCase() === "true";
 
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// CORS Configuration (open by default)
+// Add PNA header for preflight compatibility when accessing local/private servers from HTTPS origins
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Private-Network", "true");
+  next();
+});
+
+// CORS Configuration (fully open when OPEN_CORS=true)
 app.use(
   cors({
-    origin: OPEN_CORS ? true : (origin, callback) => callback(null, true),
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: OPEN_CORS ? "*" : true, // star is fine since we do not allow credentials
+    credentials: false, // must be false when Access-Control-Allow-Origin is '*'
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    // Omit allowedHeaders so CORS middleware reflects back Access-Control-Request-Headers
     optionsSuccessStatus: 204,
     maxAge: 86400, // cache preflight for 1 day
   })
@@ -32,9 +37,11 @@ app.use(
 app.options(
   /.*/,
   cors({
-    origin: OPEN_CORS ? true : (origin, callback) => callback(null, true),
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: OPEN_CORS ? "*" : true,
+    credentials: false,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    optionsSuccessStatus: 204,
+    maxAge: 86400,
   })
 );
 
