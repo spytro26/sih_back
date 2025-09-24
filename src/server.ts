@@ -8,44 +8,35 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const DEFAULT_ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://sih-front-seven.vercel.app",
-];
-const ALLOWED_ORIGINS = (
-  process.env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(",")
-)
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
+// If you want to restrict origins later, set ALLOWED_ORIGINS in .env
+// By default, we allow all origins (*) to avoid CORS issues
+const OPEN_CORS = (process.env.OPEN_CORS || "true").toLowerCase() === "true";
 
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// CORS Configuration
+// CORS Configuration (open by default)
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-      if (ALLOWED_ORIGINS.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(
-        new Error(`CORS blocked: ${origin} is not in ALLOWED_ORIGINS`)
-      );
-    },
+    origin: OPEN_CORS ? true : (origin, callback) => callback(null, true),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     optionsSuccessStatus: 204,
+    maxAge: 86400, // cache preflight for 1 day
   })
 );
 
 // Handle preflight for all routes (Express 5 compatible)
-app.options(/.*/, cors());
+app.options(
+  /.*/,
+  cors({
+    origin: OPEN_CORS ? true : (origin, callback) => callback(null, true),
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
