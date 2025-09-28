@@ -10,7 +10,10 @@ class GeminiService {
             throw new Error("GEMINI_API_KEY is required");
         }
         this.genAI = new GoogleGenerativeAI(apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Updated to use the correct model name for current API
+        this.model = this.genAI.getGenerativeModel({
+            model: "gemini-2.5-flash-lite",
+        });
     }
     buildLCAPrompt(input) {
         return `

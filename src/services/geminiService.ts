@@ -39,7 +39,10 @@ class GeminiService {
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Updated to use the correct model name for current API
+    this.model = this.genAI.getGenerativeModel({
+      model: "gemini-2.5-flash-lite",
+    });
   }
 
   private buildLCAPrompt(input: LCAInput): string {
